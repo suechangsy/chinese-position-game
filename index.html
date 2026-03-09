@@ -20,8 +20,9 @@ body{
 #table{
   position:absolute;
   top:220px;
-  left:330px;
-  font-size:160px;
+  left:300px;
+  font-size:160px; /* 放大显示沙发 */
+  font-family: "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif;
 }
 #object{
   position:absolute;
@@ -29,6 +30,7 @@ body{
   left:120px;
   font-size:150px;
   cursor:grab;
+  font-family: "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif;
 }
 button{
   margin:6px;
@@ -55,7 +57,7 @@ select{
 Object:
 <input id="objectInput" placeholder="猫">
 Target:
-<input id="targetInput" placeholder="桌子">
+<input id="targetInput" placeholder="沙发">
 <button onclick="applyWords()">Apply</button>
 <br><br>
 Level:
@@ -64,12 +66,13 @@ Level:
   <option value="2">2 – 左/右</option>
   <option value="3">3 – 前/后/中间</option>
 </select>
+<br><br>
+<button onclick="toggleHints()">显示/隐藏方位提示</button>
+<button onclick="speak()">🔊 Listen</button>
 </div>
 
-<button onclick="speak()">🔊 Listen</button>
-
 <div id="game">
-  <div id="table">🟫</div>
+  <div id="table">🛋</div> <!-- 沙发 -->
   <div id="object">🐱</div>
 </div>
 
@@ -81,7 +84,7 @@ Level:
 const emojiMap={
 "猫":"🐱","狗":"🐶","兔子":"🐰","熊猫":"🐼",
 "苹果":"🍎","香蕉":"🍌","西瓜":"🍉","橙子":"🍊","鸡蛋":"🥚",
-"书":"📘","笔":"✏️","桌子":"🟫","椅子":"🪑",
+"书":"📘","笔":"✏️","沙发":"🛋","椅子":"🪑",
 "杯子":"☕","球":"⚽","车":"🚗","手机":"📱","电脑":"💻",
 "鱼":"🐟","鸡":"🐔","猪":"🐷","牛":"🐮","羊":"🐑","面包":"🍞",
 "奶瓶":"🍼","帽子":"🧢","雨伞":"☂️","钥匙":"🔑"
@@ -90,6 +93,24 @@ const emojiMap={
 function getEmoji(word){
   if(emojiMap[word]) return emojiMap[word]
   return "📦"
+}
+
+// ===== 中文转拼音 =====
+const pinyinMap = {
+  "猫":"māo","狗":"gǒu","兔":"tù","兔子":"tùzi","熊猫":"xióngmāo",
+  "沙发":"shāfā","椅子":"yǐzi","桌子":"zhuōzi",
+  "苹果":"píngguǒ","香蕉":"xiāngjiāo","西瓜":"xīguā"
+}
+
+function toPinyin(word){
+  let result=""
+  for(let i=0;i<word.length;i++){
+    let c = word[i]
+    if(pinyinMap[c]) result+=pinyinMap[c]+" "
+    else if(pinyinMap[word]) { result=pinyinMap[word]; break } // 支持多字词
+    else result+=c+" "
+  }
+  return result.trim()
 }
 
 // ===== 方位词 =====
@@ -104,7 +125,8 @@ const positions=[
 ]
 
 let level=1, score=0
-let currentPos, customObject="猫", customTarget="桌子"
+let currentPos, customObject="猫", customTarget="沙发"
+let hintsVisible = true
 
 // ===== 分级系统 =====
 function getPositions(){
@@ -119,10 +141,14 @@ function nextRound(){
   currentPos=posList[Math.floor(Math.random()*posList.length)]
   document.getElementById("object").innerText=getEmoji(customObject)
   document.getElementById("table").innerText=getEmoji(customTarget)
+  
   document.getElementById("instruction").innerText=
     "把"+customObject+"放在"+customTarget+currentPos.cn
   document.getElementById("pinyin").innerText=
-    "bǎ "+customObject+" fàng zài "+customTarget+" "+currentPos.py
+    "bǎ "+toPinyin(customObject)+" fàng zài "+toPinyin(customTarget)+" "+currentPos.py
+  
+  document.getElementById("instruction").style.display = hintsVisible ? "block" : "none"
+  document.getElementById("pinyin").style.display = hintsVisible ? "block" : "none"
 }
 
 // ===== 语音 =====
@@ -149,6 +175,13 @@ function changeLevel(){
   level = parseInt(document.getElementById("levelSelect").value)
   document.getElementById("level").innerText = level
   nextRound()
+}
+
+// ===== 显示/隐藏提示 =====
+function toggleHints(){
+  hintsVisible = !hintsVisible
+  document.getElementById("instruction").style.display = hintsVisible ? "block" : "none"
+  document.getElementById("pinyin").style.display = hintsVisible ? "block" : "none"
 }
 
 // ===== 拖拽 =====
@@ -188,36 +221,40 @@ function checkAnswer(){
   const objRect=obj.getBoundingClientRect()
   const centerX = objRect.left - gameRect.left + obj.offsetWidth/2
   const centerY = objRect.top - gameRect.top + obj.offsetHeight/2
+  const table = document.getElementById("table")
+  const tableRect = table.getBoundingClientRect()
+  const tableCenterX = tableRect.left - gameRect.left + tableRect.width/2
+  const tableCenterY = tableRect.top - gameRect.top + tableRect.height/2
+
   let correct=false
 
   switch(currentPos.cn){
     case "上面":
-      if(centerY < gameRect.height/3) correct=true
+      if(centerY < tableCenterY) correct=true
       break;
     case "下面":
-      if(centerY > gameRect.height*2/3) correct=true
+      if(centerY > tableCenterY) correct=true
       break;
     case "左边":
-      if(centerX < gameRect.width/3) correct=true
+      if(centerX < tableCenterX) correct=true
       break;
     case "右边":
-      if(centerX > gameRect.width*2/3) correct=true
+      if(centerX > tableCenterX) correct=true
       break;
     case "前面":
-      if(centerY < gameRect.height/2 &&
-         centerX > gameRect.width/3 &&
-         centerX < gameRect.width*2/3) correct=true
+      if(centerY < tableCenterY && centerX > tableCenterX - tableRect.width/2 && centerX < tableCenterX + tableRect.width/2)
+        correct=true
       break;
     case "后面":
-      if(centerY > gameRect.height/2 &&
-         centerX > gameRect.width/3 &&
-         centerX < gameRect.width*2/3) correct=true
+      if(centerY > tableCenterY && centerX > tableCenterX - tableRect.width/2 && centerX < tableCenterX + tableRect.width/2)
+        correct=true
       break;
     case "中间":
-      if(centerX > gameRect.width/3 &&
-         centerX < gameRect.width*2/3 &&
-         centerY > gameRect.height/3 &&
-         centerY < gameRect.height*2/3) correct=true
+      if(centerX > tableCenterX - tableRect.width/2 &&
+         centerX < tableCenterX + tableRect.width/2 &&
+         centerY > tableCenterY - tableRect.height/2 &&
+         centerY < tableCenterY + tableRect.height/2)
+        correct=true
       break;
   }
 
@@ -231,7 +268,7 @@ function checkAnswer(){
   }
 }
 
-// ===== 初始一轮 =====
+// ===== 初始化 =====
 nextRound()
 </script>
 </body>
