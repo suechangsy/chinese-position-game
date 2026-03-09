@@ -1,192 +1,207 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
 <meta charset="UTF-8">
-<title>Chinese Position Game</title>
+<title>Chinese Position Game - Smart Emoji</title>
 
 <style>
-
 body{
-font-family:Arial;
-text-align:center;
-background:#f5f5f5;
+  font-family:Arial;
+  text-align:center;
+  background:#f4f4f4;
 }
 
-#gameArea{
-width:500px;
-height:400px;
-border:2px solid #ccc;
-margin:auto;
-position:relative;
-background:white;
+#game{
+  width:700px;
+  height:450px;
+  margin:auto;
+  border:2px solid #ccc;
+  background:white;
+  position:relative;
 }
 
 #table{
-width:150px;
-position:absolute;
-top:170px;
-left:175px;
+  position:absolute;
+  top:220px;
+  left:330px;
+  font-size:160px;
 }
 
-#cat{
-width:70px;
-position:absolute;
-top:30px;
-left:30px;
-cursor:grab;
-font-size:50px;
-}
-
-#wordList{
-position:fixed;
-right:20px;
-top:120px;
-background:white;
-border:1px solid #ddd;
-padding:15px;
-border-radius:10px;
-}
-
-td{
-padding:3px 8px;
+#object{
+  position:absolute;
+  top:80px;
+  left:120px;
+  font-size:150px;
+  cursor:grab;
 }
 
 button{
-margin:8px;
-padding:8px 14px;
-font-size:14px;
+  margin:6px;
+  padding:8px 14px;
 }
 
+input{
+  padding:5px;
+  font-size:16px;
+}
 </style>
-</head>
 
+</head>
 <body>
 
 <h2 id="instruction"></h2>
+<div id="pinyin"></div>
+
+<h3>Level: <span id="level">1</span></h3>
+
+<div style="margin:10px">
+Object:
+<input id="objectInput" placeholder="猫">
+Target:
+<input id="targetInput" placeholder="桌子">
+<button onclick="applyWords()">Apply</button>
+</div>
 
 <button onclick="speak()">🔊 Listen</button>
-<button onclick="toggleWords()">👁 Hide Words</button>
 
-<div id="gameArea">
-
-<div id="table">🪑</div>
-
-<div id="cat" draggable="true">🐱</div>
-
+<div id="game">
+  <div id="table">🟫</div>
+  <div id="object">🐱</div>
 </div>
 
 <h3>Score: <span id="score">0</span></h3>
-
-<button onclick="newRound()">Next</button>
-
-
-<div id="wordList">
-
-<h3>方位词</h3>
-
-<table>
-
-<tr><td>上面</td><td>shàngmiàn</td><td>on</td></tr>
-<tr><td>下面</td><td>xiàmiàn</td><td>under</td></tr>
-<tr><td>左边</td><td>zuǒbiān</td><td>left</td></tr>
-<tr><td>右边</td><td>yòubiān</td><td>right</td></tr>
-<tr><td>前面</td><td>qiánmiàn</td><td>front</td></tr>
-<tr><td>后面</td><td>hòumiàn</td><td>behind</td></tr>
-<tr><td>中间</td><td>zhōngjiān</td><td>middle</td></tr>
-
-</table>
-
-</div>
-
+<button onclick="nextRound()">Next</button>
 
 <script>
+// ==== 名词 + Emoji 智能系统 ====
+const emojiMap={
+"猫":"🐱","狗":"🐶","兔子":"🐰","熊猫":"🐼",
+"苹果":"🍎","香蕉":"🍌","西瓜":"🍉","橙子":"🍊","鸡蛋":"🥚",
+"书":"📘","笔":"✏️","桌子":"🟫","椅子":"🪑",
+"杯子":"☕","球":"⚽","车":"🚗","手机":"📱","电脑":"💻",
+"鱼":"🐟","鸡":"🐔","猪":"🐷","牛":"🐮","羊":"🐑","面包":"🍞","奶瓶":"🍼","帽子":"🧢","雨伞":"☂️","钥匙":"🔑"
+}
 
-const positions = [
-{cn:"上面",en:"on"},
-{cn:"下面",en:"under"},
-{cn:"左边",en:"left"},
-{cn:"右边",en:"right"},
-{cn:"前面",en:"in front"},
-{cn:"后面",en:"behind"}
+// 获取 emoji
+function getEmoji(word){
+  if(emojiMap[word]){
+    return emojiMap[word]
+  }
+  return "📦" // 默认
+}
+
+// ==== 方位词 ====
+const positions=[
+{cn:"上面",py:"shàngmiàn"},
+{cn:"下面",py:"xiàmiàn"},
+{cn:"左边",py:"zuǒbiān"},
+{cn:"右边",py:"yòubiān"},
+{cn:"前面",py:"qiánmiàn"},
+{cn:"后面",py:"hòumiàn"}
 ]
 
-let current
-let score = 0
+let level=1, score=0
+let currentPos, customObject="猫", customTarget="桌子"
 
-function newRound(){
-
-current = positions[Math.floor(Math.random()*positions.length)]
-
-document.getElementById("instruction").innerHTML =
-"把猫放在桌子" + current.cn + "<br>Put the cat " + current.en + " the table"
-
+function getPositions(){
+  if(level==1) return positions.filter(p=>p.cn=="上面"||p.cn=="下面")
+  if(level==2) return positions.filter(p=>p.cn=="左边"||p.cn=="右边")
+  return positions
 }
 
+// ==== 更新一轮 ====
+function nextRound(){
+  let posList=getPositions()
+  currentPos=posList[Math.floor(Math.random()*posList.length)]
+  // 随机选择 emoji 如果想保留 ObjectInput 可以取消下一行
+  // customObject=customObject || "猫"
+  document.getElementById("object").innerText=getEmoji(customObject)
+  document.getElementById("table").innerText=getEmoji(customTarget)
+
+  document.getElementById("instruction").innerText=
+    "把"+customObject+"放在"+customTarget+currentPos.cn
+  document.getElementById("pinyin").innerText=
+    "bǎ "+customObject+" fàng zài "+customTarget+" "+currentPos.py
+}
+
+// ==== 语音 ====
 function speak(){
-
-let text = "把猫放在桌子" + current.cn
-
-let utterance = new SpeechSynthesisUtterance(text)
-
-utterance.lang = "zh-CN"
-
-speechSynthesis.speak(utterance)
-
+  let text="把"+customObject+"放在"+customTarget+currentPos.cn
+  let utter=new SpeechSynthesisUtterance(text)
+  utter.lang="zh-CN"
+  speechSynthesis.speak(utter)
 }
 
-let visible = true
-
-function toggleWords(){
-
-let box = document.getElementById("wordList")
-
-if(visible){
-
-box.style.display="none"
-event.target.innerText="👁 Show Words"
-
-}else{
-
-box.style.display="block"
-event.target.innerText="👁 Hide Words"
-
+// ==== 应用输入文字 ====
+function applyWords(){
+  let o=document.getElementById("objectInput").value
+  let t=document.getElementById("targetInput").value
+  if(o) customObject=o
+  if(t) customTarget=t
+  document.getElementById("object").innerText=getEmoji(customObject)
+  document.getElementById("table").innerText=getEmoji(customTarget)
+  nextRound()
 }
 
-visible=!visible
+// ==== 拖拽支持鼠标 + 手机 ====
+const obj=document.getElementById("object")
+let dragging=false
 
+obj.addEventListener("mousedown",()=>dragging=true)
+obj.addEventListener("touchstart",()=>dragging=true)
+
+document.addEventListener("mousemove",drag)
+document.addEventListener("touchmove",drag)
+
+document.addEventListener("mouseup",endDrag)
+document.addEventListener("touchend",endDrag)
+
+function drag(e){
+  if(!dragging) return
+  let x, y
+  if(e.touches){
+    x=e.touches[0].pageX
+    y=e.touches[0].pageY
+  }else{
+    x=e.pageX
+    y=e.pageY
+  }
+  obj.style.left=(x-70)+"px"
+  obj.style.top=(y-150)+"px"
 }
 
-const cat = document.getElementById("cat")
-
-cat.onmouseup = function(){
-
-let x = cat.offsetLeft
-let y = cat.offsetTop
-
-let correct=false
-
-if(current.cn=="上面" && y < 160) correct=true
-if(current.cn=="下面" && y > 240) correct=true
-if(current.cn=="左边" && x < 160) correct=true
-if(current.cn=="右边" && x > 260) correct=true
-
-if(correct){
-
-score++
-document.getElementById("score").innerText=score
-alert("✅ Correct!")
-
-}else{
-
-alert("❌ Try again")
-
+function endDrag(){
+  if(!dragging) return
+  dragging=false
+  checkAnswer()
 }
 
+// ==== 判断位置 ====
+function checkAnswer(){
+  let rect=obj.getBoundingClientRect()
+  let x=rect.left
+  let y=rect.top
+  let correct=false
+
+  if(currentPos.cn=="上面" && y<200) correct=true
+  if(currentPos.cn=="下面" && y>320) correct=true
+  if(currentPos.cn=="左边" && x<300) correct=true
+  if(currentPos.cn=="右边" && x>450) correct=true
+
+  if(correct){
+    score++
+    document.getElementById("score").innerText=score
+    alert("✅ Correct!")
+    if(score==5){level=2; document.getElementById("level").innerText=2; alert("Level 2!")}
+    if(score==10){level=3; document.getElementById("level").innerText=3; alert("Level 3!")}
+    nextRound()
+  }else{
+    alert("❌ Try again")
+  }
 }
 
-newRound()
-
+// ==== 初始一轮 ====
+nextRound()
 </script>
-
 </body>
 </html>
