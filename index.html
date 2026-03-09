@@ -3,14 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <title>Chinese Position Game - Smart Emoji</title>
-
 <style>
 body{
   font-family:Arial;
   text-align:center;
   background:#f4f4f4;
 }
-
 #game{
   width:700px;
   height:450px;
@@ -19,14 +17,12 @@ body{
   background:white;
   position:relative;
 }
-
 #table{
   position:absolute;
   top:220px;
   left:330px;
   font-size:160px;
 }
-
 #object{
   position:absolute;
   top:80px;
@@ -34,18 +30,19 @@ body{
   font-size:150px;
   cursor:grab;
 }
-
 button{
   margin:6px;
   padding:8px 14px;
 }
-
 input{
   padding:5px;
   font-size:16px;
 }
+select{
+  padding:5px;
+  font-size:16px;
+}
 </style>
-
 </head>
 <body>
 
@@ -60,6 +57,13 @@ Object:
 Target:
 <input id="targetInput" placeholder="桌子">
 <button onclick="applyWords()">Apply</button>
+<br><br>
+Level:
+<select id="levelSelect" onchange="changeLevel()">
+  <option value="1">1 – 上/下</option>
+  <option value="2">2 – 左/右</option>
+  <option value="3">3 – 前/后/中间</option>
+</select>
 </div>
 
 <button onclick="speak()">🔊 Listen</button>
@@ -73,58 +77,55 @@ Target:
 <button onclick="nextRound()">Next</button>
 
 <script>
-// ==== 名词 + Emoji 智能系统 ====
+// ===== 智能 Emoji 系统 =====
 const emojiMap={
 "猫":"🐱","狗":"🐶","兔子":"🐰","熊猫":"🐼",
 "苹果":"🍎","香蕉":"🍌","西瓜":"🍉","橙子":"🍊","鸡蛋":"🥚",
 "书":"📘","笔":"✏️","桌子":"🟫","椅子":"🪑",
 "杯子":"☕","球":"⚽","车":"🚗","手机":"📱","电脑":"💻",
-"鱼":"🐟","鸡":"🐔","猪":"🐷","牛":"🐮","羊":"🐑","面包":"🍞","奶瓶":"🍼","帽子":"🧢","雨伞":"☂️","钥匙":"🔑"
+"鱼":"🐟","鸡":"🐔","猪":"🐷","牛":"🐮","羊":"🐑","面包":"🍞",
+"奶瓶":"🍼","帽子":"🧢","雨伞":"☂️","钥匙":"🔑"
 }
 
-// 获取 emoji
 function getEmoji(word){
-  if(emojiMap[word]){
-    return emojiMap[word]
-  }
-  return "📦" // 默认
+  if(emojiMap[word]) return emojiMap[word]
+  return "📦"
 }
 
-// ==== 方位词 ====
+// ===== 方位词 =====
 const positions=[
 {cn:"上面",py:"shàngmiàn"},
 {cn:"下面",py:"xiàmiàn"},
 {cn:"左边",py:"zuǒbiān"},
 {cn:"右边",py:"yòubiān"},
 {cn:"前面",py:"qiánmiàn"},
-{cn:"后面",py:"hòumiàn"}
+{cn:"后面",py:"hòumiàn"},
+{cn:"中间",py:"zhōngjiān"}
 ]
 
 let level=1, score=0
 let currentPos, customObject="猫", customTarget="桌子"
 
+// ===== 分级系统 =====
 function getPositions(){
   if(level==1) return positions.filter(p=>p.cn=="上面"||p.cn=="下面")
   if(level==2) return positions.filter(p=>p.cn=="左边"||p.cn=="右边")
   return positions
 }
 
-// ==== 更新一轮 ====
+// ===== 更新一轮 =====
 function nextRound(){
   let posList=getPositions()
   currentPos=posList[Math.floor(Math.random()*posList.length)]
-  // 随机选择 emoji 如果想保留 ObjectInput 可以取消下一行
-  // customObject=customObject || "猫"
   document.getElementById("object").innerText=getEmoji(customObject)
   document.getElementById("table").innerText=getEmoji(customTarget)
-
   document.getElementById("instruction").innerText=
     "把"+customObject+"放在"+customTarget+currentPos.cn
   document.getElementById("pinyin").innerText=
     "bǎ "+customObject+" fàng zài "+customTarget+" "+currentPos.py
 }
 
-// ==== 语音 ====
+// ===== 语音 =====
 function speak(){
   let text="把"+customObject+"放在"+customTarget+currentPos.cn
   let utter=new SpeechSynthesisUtterance(text)
@@ -132,7 +133,7 @@ function speak(){
   speechSynthesis.speak(utter)
 }
 
-// ==== 应用输入文字 ====
+// ===== 应用输入文字 =====
 function applyWords(){
   let o=document.getElementById("objectInput").value
   let t=document.getElementById("targetInput").value
@@ -143,31 +144,36 @@ function applyWords(){
   nextRound()
 }
 
-// ==== 拖拽支持鼠标 + 手机 ====
+// ===== 切换 Level =====
+function changeLevel(){
+  level = parseInt(document.getElementById("levelSelect").value)
+  document.getElementById("level").innerText = level
+  nextRound()
+}
+
+// ===== 拖拽 =====
 const obj=document.getElementById("object")
 let dragging=false
-
 obj.addEventListener("mousedown",()=>dragging=true)
 obj.addEventListener("touchstart",()=>dragging=true)
-
 document.addEventListener("mousemove",drag)
 document.addEventListener("touchmove",drag)
-
 document.addEventListener("mouseup",endDrag)
 document.addEventListener("touchend",endDrag)
 
 function drag(e){
   if(!dragging) return
+  const gameRect = document.getElementById("game").getBoundingClientRect()
   let x, y
   if(e.touches){
-    x=e.touches[0].pageX
-    y=e.touches[0].pageY
-  }else{
-    x=e.pageX
-    y=e.pageY
+    x = e.touches[0].clientX - gameRect.left
+    y = e.touches[0].clientY - gameRect.top
+  } else {
+    x = e.clientX - gameRect.left
+    y = e.clientY - gameRect.top
   }
-  obj.style.left=(x-70)+"px"
-  obj.style.top=(y-150)+"px"
+  obj.style.left = (x - obj.offsetWidth/2) + "px"
+  obj.style.top = (y - obj.offsetHeight/2) + "px"
 }
 
 function endDrag(){
@@ -176,31 +182,56 @@ function endDrag(){
   checkAnswer()
 }
 
-// ==== 判断位置 ====
+// ===== 判断位置 =====
 function checkAnswer(){
-  let rect=obj.getBoundingClientRect()
-  let x=rect.left
-  let y=rect.top
+  const gameRect=document.getElementById("game").getBoundingClientRect()
+  const objRect=obj.getBoundingClientRect()
+  const centerX = objRect.left - gameRect.left + obj.offsetWidth/2
+  const centerY = objRect.top - gameRect.top + obj.offsetHeight/2
   let correct=false
 
-  if(currentPos.cn=="上面" && y<200) correct=true
-  if(currentPos.cn=="下面" && y>320) correct=true
-  if(currentPos.cn=="左边" && x<300) correct=true
-  if(currentPos.cn=="右边" && x>450) correct=true
+  switch(currentPos.cn){
+    case "上面":
+      if(centerY < gameRect.height/3) correct=true
+      break;
+    case "下面":
+      if(centerY > gameRect.height*2/3) correct=true
+      break;
+    case "左边":
+      if(centerX < gameRect.width/3) correct=true
+      break;
+    case "右边":
+      if(centerX > gameRect.width*2/3) correct=true
+      break;
+    case "前面":
+      if(centerY < gameRect.height/2 &&
+         centerX > gameRect.width/3 &&
+         centerX < gameRect.width*2/3) correct=true
+      break;
+    case "后面":
+      if(centerY > gameRect.height/2 &&
+         centerX > gameRect.width/3 &&
+         centerX < gameRect.width*2/3) correct=true
+      break;
+    case "中间":
+      if(centerX > gameRect.width/3 &&
+         centerX < gameRect.width*2/3 &&
+         centerY > gameRect.height/3 &&
+         centerY < gameRect.height*2/3) correct=true
+      break;
+  }
 
   if(correct){
     score++
     document.getElementById("score").innerText=score
     alert("✅ Correct!")
-    if(score==5){level=2; document.getElementById("level").innerText=2; alert("Level 2!")}
-    if(score==10){level=3; document.getElementById("level").innerText=3; alert("Level 3!")}
     nextRound()
   }else{
     alert("❌ Try again")
   }
 }
 
-// ==== 初始一轮 ====
+// ===== 初始一轮 =====
 nextRound()
 </script>
 </body>
